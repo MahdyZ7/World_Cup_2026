@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>World Cup 2026 — Abu Dhabi Times · BBC iPlayer / STV Player</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Barlow+Condensed:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f7f1e1;
+    --ink:#16241c;
+    --pitch:#0e4d2c;
+    --pitch-deep:#0a3a21;
+    --gold:#c9a227;
+    --line:#cdbf9f;
+    --hl:#ce1126;   /* Egypt red */
+    --bbc:#c2185b;       /* iPlayer pink-red */
+    --stv:#0a57d0;       /* STV blue */
+    --itvx:#11202f;      /* ITVX dark */
+    --itvx-text:#d9e667;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  body{
+    background:#1c1a16;
+    font-family:"Barlow Condensed",sans-serif;
+    color:var(--ink);
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+
+  /* ---------- screen toolbar ---------- */
+  .toolbar{
+    position:sticky;top:0;z-index:50;
+    background:#11100d;color:#e8e0cb;
+    padding:10px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;
+    font-size:15px;border-bottom:2px solid var(--gold);
+  }
+  .toolbar b{color:var(--gold);font-family:"Barlow Semi Condensed",sans-serif}
+  .toolbar button{
+    font-family:"Barlow Semi Condensed",sans-serif;font-weight:600;font-size:14px;
+    border:none;border-radius:4px;padding:7px 14px;cursor:pointer;
+  }
+  #btnPrint{background:var(--gold);color:#11100d}
+  #btnReset{background:#3a362c;color:#e8e0cb}
+  .hint{opacity:.75;font-size:13px}
+  #syncDot{color:#d08a3e;opacity:1}
+  #syncDot.ok{color:#3ddc6e}
+
+  /* ---------- the 10x15 strip ---------- */
+  .sheet{
+    width:100mm;margin:24px auto;background:var(--paper);
+    box-shadow:0 8px 40px rgba(0,0,0,.6);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(14,77,44,.035) 0, rgba(14,77,44,.035) 1px, transparent 1px, transparent 6px);
+  }
+
+  /* masthead */
+  .masthead{
+    background:var(--pitch);
+    background-image:linear-gradient(135deg, var(--pitch) 0 70%, var(--pitch-deep) 70%);
+    color:var(--paper);text-align:center;padding:3.5mm 3mm 3mm;
+    border-bottom:1.2mm solid var(--gold);
+    break-inside:avoid;
+  }
+  .masthead h1{
+    font-family:"Alfa Slab One",serif;font-size:17pt;line-height:1;letter-spacing:.5px;
+  }
+  .masthead h1 span{color:var(--gold)}
+  .masthead .sub{
+    font-size:7.5pt;letter-spacing:2.5px;text-transform:uppercase;margin-top:1.2mm;color:#cfe3d3;
+  }
+  .masthead .tz{
+    display:inline-block;margin-top:1.6mm;font-size:7.5pt;font-weight:700;letter-spacing:1px;
+    background:var(--gold);color:var(--pitch-deep);padding:.5mm 2.5mm;border-radius:2mm;
+    text-transform:uppercase;
+  }
+  .legend{
+    display:flex;justify-content:center;gap:2mm;padding:1.8mm 2mm;
+    border-bottom:.3mm solid var(--line);font-size:6.3pt;align-items:center;
+    background:rgba(14,77,44,.05);
+  }
+  .legend .lg{display:flex;align-items:center;gap:1mm;font-weight:600;letter-spacing:.3px}
+
+  /* day blocks */
+  .day{break-inside:avoid;padding:0 3mm}
+  .dayhead{
+    display:flex;align-items:center;gap:2mm;margin:1.6mm 0 .6mm;
+  }
+  .dayhead::before,.dayhead::after{content:"";flex:1;height:.3mm;background:var(--line)}
+  .dayhead span{
+    font-family:"Barlow Semi Condensed",sans-serif;font-weight:600;font-size:7pt;
+    letter-spacing:1.6px;text-transform:uppercase;color:var(--pitch);white-space:nowrap;
+  }
+
+  .match{
+    display:grid;
+    grid-template-columns: 8.5mm 1fr 4.6mm 1.6mm 4.6mm 1fr 11mm;
+    align-items:center;gap:.6mm;
+    padding:.45mm 0;font-size:7pt;line-height:1.15;
+    border-bottom:.2mm dotted #ddd2b4;
+  }
+  .day .match:last-child{border-bottom:none}
+  .t{font-weight:700;font-variant-numeric:tabular-nums;color:var(--pitch);font-size:7pt}
+  img.flag{height:2.8mm;width:auto;vertical-align:-0.5mm;border:.15mm solid rgba(22,36,28,.25);border-radius:.3mm}
+  .h{text-align:right;font-weight:600;white-space:nowrap;overflow:hidden}
+  .a{text-align:left;font-weight:600;white-space:nowrap;overflow:hidden}
+  .colon{text-align:center;font-weight:700;color:#9a8d6a}
+
+  .sc{
+    width:4.6mm;height:4.1mm;text-align:center;
+    border:.35mm solid var(--pitch);border-radius:.8mm;background:#fff;
+    font:700 7.5pt "Barlow Condensed",sans-serif;color:var(--ink);
+    appearance:textfield;-moz-appearance:textfield;padding:0;
+  }
+  .sc::-webkit-outer-spin-button,.sc::-webkit-inner-spin-button{-webkit-appearance:none}
+  .sc:focus{outline:1px solid var(--gold)}
+
+  .chip{
+    font-family:"Barlow Semi Condensed",sans-serif;font-weight:600;font-size:5.6pt;
+    letter-spacing:.4px;text-align:center;border-radius:1mm;padding:.7mm 0;
+    color:#fff;text-transform:uppercase;
+  }
+  .chip.BBC{background:var(--bbc)}
+  .chip.STV{background:var(--stv)}
+  .chip.ITVX{background:var(--itvx);color:var(--itvx-text)}
+  button.chip{border:none;cursor:pointer;width:100%}
+
+  /* Egypt highlight */
+  .match.hl{
+    background:linear-gradient(90deg, rgba(206,17,38,.12), rgba(206,17,38,.04));
+    border-left:1mm solid var(--hl);border-radius:.6mm;
+    margin-left:-1.6mm;padding-left:.6mm;
+  }
+  .match.hl .t{color:var(--hl)}
+
+  /* knockout */
+  .stagehead{
+    break-inside:avoid;
+    margin:1.8mm 3mm .8mm;background:var(--pitch);color:var(--paper);
+    text-align:center;padding:1mm 0 .8mm;border-radius:.8mm;
+    font-family:"Alfa Slab One",serif;font-size:8pt;letter-spacing:1.5px;text-transform:uppercase;
+  }
+  .stagehead small{display:block;font-family:"Barlow Condensed",sans-serif;font-size:6pt;letter-spacing:2px;color:var(--gold);margin-top:.4mm}
+  .ko .match{grid-template-columns: 13.5mm 1fr 4.6mm 1.6mm 4.6mm 1fr 11mm}
+  /* knockout blocks are tall (16 rows): let them flow across pages, row by row */
+  .ko.day{break-inside:auto}
+  .ko .match{break-inside:avoid;padding:.3mm 0}
+  .stagehead{break-after:avoid}
+  .ko-dt{
+    width:13mm;border:none;border-bottom:.25mm dashed #b3a784;background:transparent;
+    font:700 6.4pt "Barlow Condensed",sans-serif;color:var(--pitch);padding:0;text-align:left;
+  }
+  .ko-team{
+    width:100%;border:none;border-bottom:.25mm dashed #b3a784;background:transparent;
+    font:600 7pt "Barlow Condensed",sans-serif;color:var(--ink);padding:0;
+  }
+  .ko-team.h{text-align:right}
+  .ko-dt:focus,.ko-team:focus{outline:none;border-bottom-color:var(--gold);background:#fffbe9}
+
+  .final .match{background:linear-gradient(90deg, rgba(201,162,39,.18), rgba(201,162,39,.05));border-radius:.8mm;border-left:1mm solid var(--gold);margin-left:-1.6mm;padding-left:.6mm}
+
+  .foot{
+    break-inside:avoid;
+    margin-top:1.2mm;padding:1mm 3mm 1.5mm;border-top:.3mm solid var(--line);
+    font-size:5.4pt;color:#7d7257;text-align:center;letter-spacing:.4px;line-height:1.45;
+  }
+
+  /* ---------- print ---------- */
+  @page{size:100mm 150mm;margin:0}
+  @media print{
+    .toolbar{display:none}
+    body{background:#fff}
+    .sheet{margin:0;box-shadow:none;width:100mm}
+    .sc:focus{outline:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <button id="btnPrint" onclick="window.print()">🖨️ Print 10×15 cm</button>
+  <button id="btnReset" onclick="resetAll()">Clear scores</button>
+  <span class="hint"><b>Scores save automatically</b> — type them in as matches finish.</span>
+  <span class="hint" id="syncDot"></span>
+  <span class="hint">Printer settings: paper <b>10×15 cm (4×6 in)</b> · margins <b>None</b> · scale <b>100%</b> · <b>background graphics ON</b>.</span>
+</div>
+
+<div class="sheet">
+  <div class="masthead">
+    <h1>WORLD CUP <span>2026</span></h1>
+    <div class="sub">USA · Canada · Mexico &nbsp;·&nbsp; 11 June – 19 July</div>
+    <div class="tz">⏱ All kick-offs in Abu Dhabi time (GMT+4)</div>
+  </div>
+  <div class="legend">
+    <span class="lg"><span class="chip BBC" style="width:12mm">iPlayer</span> BBC iPlayer</span>
+    <span class="lg"><span class="chip STV" style="width:12mm">STV</span> STV Player</span>
+    <span class="lg"><span class="chip ITVX" style="width:12mm">ITVX</span> ITV4 via ITVX</span>
+  </div>
+
+  <div id="groupStage"></div>
+  <div id="knockout"></div>
+
+  <div class="foot">
+    Channels per UK listings (Scotland: ITV1 = STV). Knockout pairings &amp; channels are confirmed as the
+    tournament unfolds — type or write them in. <img class="flag" src="https://flagcdn.com/h24/eg.png" alt="Egypt flag"> Egypt matches highlighted.
+  </div>
+</div>
+
+<script>
+"use strict";
+// ============================================================================
+// All HTML below is templated EXCLUSIVELY from the static constants in this
+// file (T, M, KO, DOW). User-entered values (scores, knockout team names)
+// are only ever read/written through input.value, textContent and
+// localStorage — they never pass through an HTML string. No untrusted data
+// reaches insertAdjacentHTML.
+// ============================================================================
+
+// ---- team lookup: code -> [flagcdn ISO code, short name] ----
+// Flag images instead of emoji: Windows browsers don't render flag emojis.
+const T = {
+  MEX:["mx","Mexico"], RSA:["za","S. Africa"], KOR:["kr","S. Korea"], CZE:["cz","Czechia"],
+  CAN:["ca","Canada"], BIH:["ba","Bosnia"], QAT:["qa","Qatar"], SUI:["ch","Switzerland"],
+  BRA:["br","Brazil"], MAR:["ma","Morocco"], HAI:["ht","Haiti"], SCO:["gb-sct","Scotland"],
+  USA:["us","USA"], PAR:["py","Paraguay"], AUS:["au","Australia"], TUR:["tr","Türkiye"],
+  GER:["de","Germany"], CUW:["cw","Curaçao"], CIV:["ci","Ivory Coast"], ECU:["ec","Ecuador"],
+  NED:["nl","Netherlands"], JPN:["jp","Japan"], SWE:["se","Sweden"], TUN:["tn","Tunisia"],
+  ESP:["es","Spain"], CPV:["cv","Cape Verde"], BEL:["be","Belgium"], EGY:["eg","Egypt"],
+  KSA:["sa","Saudi Ar."], URU:["uy","Uruguay"], IRN:["ir","Iran"], NZL:["nz","N. Zealand"],
+  FRA:["fr","France"], SEN:["sn","Senegal"], IRQ:["iq","Iraq"], NOR:["no","Norway"],
+  ARG:["ar","Argentina"], ALG:["dz","Algeria"], AUT:["at","Austria"], JOR:["jo","Jordan"],
+  POR:["pt","Portugal"], COD:["cd","DR Congo"], UZB:["uz","Uzbekistan"], COL:["co","Colombia"],
+  ENG:["gb-eng","England"], CRO:["hr","Croatia"], GHA:["gh","Ghana"], PAN:["pa","Panama"]
+};
+const flagImg = iso => `<img class="flag" src="https://flagcdn.com/h24/${iso}.png" alt="">`;
+
+// ---- group stage: [AbuDhabi June date, AD kick-off, home, away, group, channel] ----
+// Converted from UK (BST) listings: Abu Dhabi = UK + 3h
+const M = [
+ [11,"23:00","MEX","RSA","A","STV"],
+ [12,"06:00","KOR","CZE","A","STV"], [12,"23:00","CAN","BIH","B","BBC"],
+ [13,"05:00","USA","PAR","D","BBC"], [13,"23:00","QAT","SUI","B","STV"],
+ [14,"02:00","BRA","MAR","C","BBC"], [14,"05:00","HAI","SCO","C","BBC"],
+ [14,"08:00","AUS","TUR","D","STV"], [14,"21:00","GER","CUW","E","STV"],
+ [15,"00:00","NED","JPN","F","STV"], [15,"03:00","CIV","ECU","E","BBC"],
+ [15,"06:00","SWE","TUN","F","STV"], [15,"20:00","ESP","CPV","H","STV"],
+ [15,"23:00","BEL","EGY","G","BBC"],
+ [16,"02:00","KSA","URU","H","STV"], [16,"05:00","IRN","NZL","G","BBC"],
+ [16,"23:00","FRA","SEN","I","BBC"],
+ [17,"02:00","IRQ","NOR","I","BBC"], [17,"05:00","ARG","ALG","J","STV"],
+ [17,"08:00","AUT","JOR","J","BBC"], [17,"21:00","POR","COD","K","BBC"],
+ [18,"00:00","ENG","CRO","L","STV"], [18,"03:00","GHA","PAN","L","STV"],
+ [18,"06:00","UZB","COL","K","BBC"], [18,"20:00","CZE","RSA","A","BBC"],
+ [18,"23:00","SUI","BIH","B","STV"],
+ [19,"02:00","CAN","QAT","B","STV"], [19,"05:00","MEX","KOR","A","BBC"],
+ [19,"23:00","USA","AUS","D","BBC"],
+ [20,"02:00","SCO","MAR","C","STV"], [20,"05:00","BRA","HAI","C","STV"],
+ [20,"08:00","TUR","PAR","D","STV"], [20,"21:00","NED","SWE","F","BBC"],
+ [21,"00:00","GER","CIV","E","STV"], [21,"04:00","ECU","CUW","E","BBC"],
+ [21,"08:00","TUN","JPN","F","BBC"], [21,"20:00","ESP","KSA","H","BBC"],
+ [21,"23:00","BEL","IRN","G","STV"],
+ [22,"02:00","URU","CPV","H","BBC"], [22,"05:00","NZL","EGY","G","STV"],
+ [22,"21:00","ARG","AUT","J","BBC"],
+ [23,"01:00","FRA","IRQ","I","BBC"], [23,"04:00","NOR","SEN","I","STV"],
+ [23,"07:00","JOR","ALG","J","STV"], [23,"21:00","POR","UZB","K","STV"],
+ [24,"00:00","ENG","GHA","L","BBC"], [24,"03:00","PAN","CRO","L","BBC"],
+ [24,"06:00","COL","COD","K","STV"], [24,"23:00","BIH","QAT","B","ITVX"],
+ [24,"23:00","SUI","CAN","B","STV"],
+ [25,"02:00","MAR","HAI","C","BBC"], [25,"02:00","SCO","BRA","C","BBC"],
+ [25,"05:00","CZE","MEX","A","BBC"], [25,"05:00","RSA","KOR","A","BBC"],
+ [26,"00:00","CUW","CIV","E","BBC"], [26,"00:00","ECU","GER","E","BBC"],
+ [26,"03:00","JPN","SWE","F","BBC"], [26,"03:00","TUN","NED","F","BBC"],
+ [26,"06:00","PAR","AUS","D","ITVX"], [26,"06:00","TUR","USA","D","STV"],
+ [26,"23:00","NOR","FRA","I","STV"], [26,"23:00","SEN","IRQ","I","ITVX"],
+ [27,"04:00","CPV","KSA","H","ITVX"], [27,"04:00","URU","ESP","H","STV"],
+ [27,"07:00","EGY","IRN","G","BBC"], [27,"07:00","NZL","BEL","G","BBC"],
+ [28,"01:00","CRO","GHA","L","ITVX"], [28,"01:00","PAN","ENG","L","STV"],
+ [28,"03:30","COL","POR","K","BBC"], [28,"03:30","COD","UZB","K","BBC"],
+ [28,"06:00","ALG","AUT","J","BBC"], [28,"06:00","JOR","ARG","J","BBC"]
+];
+
+const DOW = {11:"Thu",12:"Fri",13:"Sat",14:"Sun",15:"Mon",16:"Tue",17:"Wed",18:"Thu",
+             19:"Fri",20:"Sat",21:"Sun",22:"Mon",23:"Tue",24:"Wed",25:"Thu",26:"Fri",27:"Sat",28:"Sun"};
+
+const CHIPLBL = {BBC:"iPlayer", STV:"STV", ITVX:"ITVX"};
+
+function scoreInput(id){
+  return `<input class="sc" data-key="${id}" maxlength="2" inputmode="numeric" autocomplete="off">`;
+}
+
+// ---- render group stage (static data only) ----
+(function(){
+  const root = document.getElementById("groupStage");
+  let html = "", curDay = null;
+  M.forEach((m,i)=>{
+    const [d,t,h,a,g,ch] = m;
+    if(d!==curDay){
+      if(curDay!==null) html += `</div>`;
+      html += `<div class="day"><div class="dayhead"><span>${DOW[d]} ${d} June · GMT+4</span></div>`;
+      curDay = d;
+    }
+    const hl = (h==="EGY"||a==="EGY") ? " hl" : "";
+    html += `<div class="match${hl}">
+      <span class="t">${t}</span>
+      <span class="h">${T[h][1]} ${flagImg(T[h][0])}</span>
+      ${scoreInput("g"+i+"h")}<span class="colon">–</span>${scoreInput("g"+i+"a")}
+      <span class="a">${flagImg(T[a][0])} ${T[a][1]}</span>
+      <span class="chip ${ch}">${CHIPLBL[ch]}</span>
+    </div>`;
+  });
+  html += `</div>`;
+  root.insertAdjacentHTML("beforeend", html);
+})();
+
+// ---- knockout: editable rows (static templates only) ----
+const KO = [
+  ["ROUND OF 32","28 June – 3 July · 16 matches",16,"r32"],
+  ["ROUND OF 16","4 – 7 July · 8 matches",8,"r16"],
+  ["QUARTER-FINALS","9 – 11 July · 4 matches",4,"qf"],
+  ["SEMI-FINALS","Dallas 14 July · Atlanta 15 July",2,"sf"]
+];
+
+(function(){
+  const root = document.getElementById("knockout");
+  const koRow = (id, dt) => `<div class="match">
+      <input class="ko-dt" data-key="${id}dt" value="${dt}" placeholder="–/– · –:–">
+      <input class="ko-team h" data-key="${id}h" placeholder="________">
+      ${scoreInput(id+"sh")}<span class="colon">–</span>${scoreInput(id+"sa")}
+      <input class="ko-team" data-key="${id}a" placeholder="________">
+      <button class="chip BBC" data-chip="${id}ch" type="button">iPlayer</button>
+    </div>`;
+  let html = "";
+  KO.forEach(([title,sub,n,key])=>{
+    html += `<div class="stagehead">${title}<small>${sub} · write in date, time (GMT+4) &amp; teams</small></div><div class="ko day">`;
+    for(let i=0;i<n;i++) html += koRow(key+i,"");
+    html += `</div>`;
+  });
+  html += `<div class="stagehead">THIRD PLACE &nbsp;·&nbsp; 🏆 FINAL<small>Miami &amp; New York · 19 July (GMT+4)</small></div>
+    <div class="ko day final">` + koRow("tp0","19/7 01:00") + koRow("fin0","19/7 23:00") + `</div>`;
+  root.insertAdjacentHTML("beforeend", html);
+})();
+
+// ---- persistence ------------------------------------------------------
+// scores.json next to this file is the single source of truth (served and
+// written by serve.py). localStorage is only an offline fallback/cache.
+const KEY = "wc26-scores";
+let store = JSON.parse(localStorage.getItem(KEY) || "{}");
+let fileMode = false;
+const CHIPS = ["BBC","STV","ITVX"];
+
+function setSync(ok, msg){
+  const el = document.getElementById("syncDot");
+  if(el){ el.textContent = (ok?"● ":"○ ") + msg; el.classList.toggle("ok", ok); }
+}
+function persist(){
+  localStorage.setItem(KEY, JSON.stringify(store));
+  if(!fileMode){ setSync(false, "browser only"); return; }
+  fetch("save", {method:"POST", body: JSON.stringify(store)})
+    .then(r => setSync(r.ok, r.ok ? "synced to scores.json" : "save failed"))
+    .catch(()=> setSync(false, "save failed"));
+}
+function applyStoreToInputs(){
+  document.querySelectorAll("[data-key]").forEach(el=>{
+    const k = el.dataset.key;
+    el.value = Object.prototype.hasOwnProperty.call(store,k) ? String(store[k]) : (el.classList.contains("ko-dt") ? el.defaultValue : "");
+  });
+  document.querySelectorAll("[data-chip]").forEach(btn=>{
+    const v = CHIPS.includes(store[btn.dataset.chip]) ? store[btn.dataset.chip] : "BBC";
+    btn.className = "chip "+v; btn.textContent = CHIPLBL[v];
+  });
+}
+document.querySelectorAll("[data-key]").forEach(el=>{
+  el.addEventListener("input", ()=>{ store[el.dataset.key]=el.value; persist(); });
+});
+document.querySelectorAll("[data-chip]").forEach(btn=>{
+  const k = btn.dataset.chip;
+  btn.addEventListener("click", ()=>{
+    const next = CHIPS[(CHIPS.indexOf(store[k]||"BBC")+1)%CHIPS.length];
+    store[k]=next; persist();
+    btn.className = "chip "+next; btn.textContent = CHIPLBL[next];
+  });
+});
+(async ()=>{
+  try{
+    const r = await fetch("scores.json", {cache:"no-store"});
+    if(r.ok){
+      const file = await r.json();
+      if(file && typeof file === "object"){
+        store = file; fileMode = true;
+        localStorage.setItem(KEY, JSON.stringify(store));
+        setSync(true, "synced to scores.json");
+      }
+    }
+  }catch(e){ /* no server: stay on localStorage */ }
+  if(!fileMode) setSync(false, "browser only");
+  applyStoreToInputs();
+})();
+
+function resetAll(){
+  if(confirm("Clear all scores and written-in knockout details?")){
+    localStorage.removeItem(KEY);
+    store = {};
+    if(fileMode){ persist(); }
+    location.reload();
+  }
+}
+</script>
+</body>
+</html>
