@@ -285,17 +285,17 @@ const M = [
  [23,"01:00","FRA","IRQ","I","BBC"], [23,"04:00","NOR","SEN","I","STV"],
  [23,"07:00","JOR","ALG","J","STV"], [23,"21:00","POR","UZB","K","STV"],
  [24,"00:00","ENG","GHA","L","BBC"], [24,"03:00","PAN","CRO","L","BBC"],
- [24,"06:00","COL","COD","K","STV"], [24,"23:00","BIH","QAT","B","ITVX"],
+ [24,"06:00","COL","COD","K","STV"], [24,"23:00","BIH","QAT","B","STV"],
  [24,"23:00","SUI","CAN","B","STV"],
  [25,"02:00","MAR","HAI","C","BBC"], [25,"02:00","SCO","BRA","C","BBC"],
  [25,"05:00","CZE","MEX","A","BBC"], [25,"05:00","RSA","KOR","A","BBC"],
  [26,"00:00","CUW","CIV","E","BBC"], [26,"00:00","ECU","GER","E","BBC"],
  [26,"03:00","JPN","SWE","F","BBC"], [26,"03:00","TUN","NED","F","BBC"],
- [26,"06:00","PAR","AUS","D","ITVX"], [26,"06:00","TUR","USA","D","STV"],
- [26,"23:00","NOR","FRA","I","STV"], [26,"23:00","SEN","IRQ","I","ITVX"],
- [27,"04:00","CPV","KSA","H","ITVX"], [27,"04:00","URU","ESP","H","STV"],
+ [26,"06:00","PAR","AUS","D","STV"], [26,"06:00","TUR","USA","D","STV"],
+ [26,"23:00","NOR","FRA","I","STV"], [26,"23:00","SEN","IRQ","I","STV"],
+ [27,"04:00","CPV","KSA","H","STV"], [27,"04:00","URU","ESP","H","STV"],
  [27,"07:00","EGY","IRN","G","BBC"], [27,"07:00","NZL","BEL","G","BBC"],
- [28,"01:00","CRO","GHA","L","ITVX"], [28,"01:00","PAN","ENG","L","STV"],
+ [28,"01:00","CRO","GHA","L","STV"], [28,"01:00","PAN","ENG","L","STV"],
  [28,"03:30","COL","POR","K","BBC"], [28,"03:30","COD","UZB","K","BBC"],
  [28,"06:00","ALG","AUT","J","BBC"], [28,"06:00","JOR","ARG","J","BBC"]
 ];
@@ -494,7 +494,7 @@ function refreshStatus(){
       wh.appendChild(document.createTextNode(" "));
       wh.appendChild(chChip());
     }
-    box.onclick = ()=> nextCard.scrollIntoView({block:"center"});
+    box.onclick = ()=> window.open(ch==="BBC" ? "https://www.bbc.co.uk/iplayer/event/fifa-world-cup" : "https://player.stv.tv/", "_blank", "noopener");
   } else {
     tag.textContent = "Group stage complete";
     fx.textContent = "See knockout rounds below";
