@@ -45,6 +45,7 @@
   }
   #btnPrint{background:var(--gold);color:#11100d}
   #btnReset{background:#3a362c;color:#e8e0cb}
+  #btnRepo{background:#3a362c;color:#e8e0cb}
   .hint{opacity:.75;font-size:13px}
   #syncDot{color:#d08a3e;opacity:1}
   #syncDot.ok{color:#3ddc6e}
@@ -182,6 +183,7 @@
 
 <div class="toolbar">
   <button id="btnPrint" onclick="window.print()">🖨️ Print 10×15 cm</button>
+  <button id="btnRepo" title="Pull latest scores from the GitHub repo">↻ Load from repo</button>
   <button id="btnReset" onclick="resetAll()">Clear scores</button>
   <span class="hint"><b>Scores save automatically</b> — type them in as matches finish.</span>
   <span class="hint" id="syncDot"></span>
@@ -347,6 +349,7 @@ const KO = [
 // scores.json next to this file is the single source of truth (served and
 // written by serve.py). localStorage is only an offline fallback/cache.
 const KEY = "wc26-scores";
+const REPO_URL = "https://raw.githubusercontent.com/MahdyZ7/World_Cup_2026/refs/heads/master/scores.json";
 let store = JSON.parse(localStorage.getItem(KEY) || "{}");
 let fileMode = false;
 const CHIPS = ["BBC","STV","ITVX"];
@@ -383,6 +386,20 @@ document.querySelectorAll("[data-chip]").forEach(btn=>{
     btn.className = "chip "+next; btn.textContent = CHIPLBL[next];
   });
 });
+async function pullFromRepo(quiet){
+  try{
+    const r = await fetch(REPO_URL, {cache:"no-store"});
+    if(!r.ok) throw new Error("http "+r.status);
+    const data = await r.json();
+    if(!data || typeof data !== "object") throw new Error("bad json");
+    store = data; persist(); applyStoreToInputs();
+    if(!quiet) setSync(fileMode, "loaded from repo");
+    return true;
+  }catch(e){
+    if(!quiet) alert("Couldn't load scores from the repo — offline, or the URL is blocked.");
+    return false;
+  }
+}
 (async ()=>{
   try{
     const r = await fetch("scores.json", {cache:"no-store"});
@@ -395,9 +412,11 @@ document.querySelectorAll("[data-chip]").forEach(btn=>{
       }
     }
   }catch(e){ /* no server: stay on localStorage */ }
+  if(Object.keys(store).length === 0) await pullFromRepo(true);  // seed from repo when empty
   if(!fileMode) setSync(false, "browser only");
   applyStoreToInputs();
 })();
+document.getElementById("btnRepo").onclick = ()=> pullFromRepo(false);
 
 function resetAll(){
   if(confirm("Clear all scores and written-in knockout details?")){

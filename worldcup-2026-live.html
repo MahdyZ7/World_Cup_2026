@@ -95,6 +95,44 @@
     .synccorner{position:static;justify-content:center;padding:10px 0 0}
   }
 
+  /* ---------- tabs ---------- */
+  .tabs{
+    display:flex;gap:4px;justify-content:center;max-width:860px;margin:22px auto 0;padding:0 14px;
+    border-bottom:1px solid var(--card-edge);
+  }
+  .tab{
+    font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;font-size:16px;letter-spacing:1.5px;
+    text-transform:uppercase;background:transparent;color:var(--dim);border:none;
+    border-bottom:3px solid transparent;margin-bottom:-1px;padding:12px 22px;cursor:pointer;
+  }
+  .tab:hover{color:var(--cream)}
+  .tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+
+  /* ---------- standings ---------- */
+  .standings-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(370px,1fr));gap:18px}
+  .grptable{background:var(--card);border:1px solid var(--card-edge);border-radius:14px;padding:14px 16px 10px}
+  .grptable h3{
+    font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+    color:var(--gold);font-size:16px;margin-bottom:8px;
+  }
+  .grptable table{width:100%;border-collapse:collapse;font-size:16px}
+  .grptable th{color:var(--dim);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px;padding:4px 4px;text-align:center}
+  .grptable td{padding:7px 4px;text-align:center;border-top:1px solid #ffffff12;font-variant-numeric:tabular-nums}
+  .grptable th.tl,.grptable td.tl{text-align:left}
+  .grptable td.tl{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+  .grptable td.tl img{height:13px;margin-right:8px;vertical-align:-1px;border-radius:2px;border:1px solid #00000066}
+  .grptable td.pos{color:var(--dim);width:20px;font-weight:700}
+  .grptable td.gf,.grptable td.ga{color:var(--dim)}
+  .grptable td.pts{font-weight:700;color:var(--cream);font-size:17px}
+  .grptable tr.q{background:linear-gradient(90deg,#1c3a2655,transparent 70%)}
+  .grptable tr.q td.pos{color:var(--live)}
+  .grptable tr.q3{background:linear-gradient(90deg,#3a341c55,transparent 70%)}
+  .grptable tr.q3 td.pos{color:var(--gold)}
+  .grptable tr.egyrow td.tl{color:#ff8a98}
+  .stand-legend{color:var(--dim);font-size:14px;text-align:center;margin:6px 4px 0;line-height:1.7}
+  .stand-legend b.g{color:var(--live)} .stand-legend b.a{color:var(--gold)}
+  .stand-empty{color:var(--dim);text-align:center;padding:40px 0;font-size:18px}
+
   /* ---------- list ---------- */
   .wrap{max-width:860px;margin:0 auto;padding:18px 14px 80px}
   .dayhead{
@@ -197,6 +235,7 @@
 
 <div class="synccorner">
   <span class="sync" id="syncDot"></span>
+  <button class="cbtn" id="btnRepo" title="Pull latest scores from the GitHub repo">↻ Repo</button>
   <button class="cbtn" id="btnExport" title="Download scores.json as a backup">⭳ Export</button>
   <label class="cbtn" title="Load a scores.json backup">⭱ Import<input type="file" id="impFile" accept=".json,application/json" hidden></label>
 </div>
@@ -212,18 +251,35 @@
   </div>
 </header>
 
-<nav class="controls">
-  <button class="fbtn" id="jumpNext">⤓ Next match</button>
-  <input type="search" id="q" placeholder="Search team… (e.g. Egypt, Brazil)" autocomplete="off">
-  <button class="fbtn" id="fToday">Today</button>
-  <button class="fbtn egy" id="fEgy">🇪🇬 Egypt</button>
-  <button class="fbtn" id="fAll">All</button>
+<nav class="tabs">
+  <button class="tab on" data-view="matches">⚽ Matches</button>
+  <button class="tab" data-view="standings">📊 Standings</button>
 </nav>
 
-<main class="wrap">
-  <div id="groupStage"></div>
-  <div id="knockout"></div>
-</main>
+<section id="matchesView">
+  <nav class="controls">
+    <button class="fbtn" id="jumpNext">⤓ Next match</button>
+    <input type="search" id="q" placeholder="Search team… (e.g. Egypt, Brazil)" autocomplete="off">
+    <button class="fbtn" id="fToday">Today</button>
+    <button class="fbtn egy" id="fEgy">🇪🇬 Egypt</button>
+    <button class="fbtn" id="fAll">All</button>
+  </nav>
+
+  <main class="wrap">
+    <div id="groupStage"></div>
+    <div id="knockout"></div>
+  </main>
+</section>
+
+<section id="standingsView" hidden>
+  <main class="wrap">
+    <div class="standings-wrap" id="standings"></div>
+    <p class="stand-legend">
+      <b class="g">●</b> Top 2 qualify &nbsp;·&nbsp; <b class="a">●</b> 3rd place may advance (8 best third-placed teams go through)<br>
+      Order by points → goal difference → goals scored. Enter scores in the Matches tab and the table updates live.
+    </p>
+  </main>
+</section>
 
 <footer class="pagefoot">
   Scores save automatically in this browser and are shared with the printable card
@@ -368,6 +424,9 @@ const KO = [
 // written by serve.py). localStorage is only an offline fallback/cache so
 // the page still works opened directly without the server.
 const KEY = "wc26-scores";
+// published scores live in the GitHub repo — used as the default when there
+// is nothing saved locally yet, and via the "↻ Repo" button on demand.
+const REPO_URL = "https://raw.githubusercontent.com/MahdyZ7/World_Cup_2026/refs/heads/master/scores.json";
 let store = JSON.parse(localStorage.getItem(KEY) || "{}");
 let fileMode = false;
 const CHIPS = ["BBC","STV","ITVX"];
@@ -393,8 +452,12 @@ function applyStoreToInputs(){
     btn.className = "chip "+v; btn.textContent = CHIPLBL[v];
   });
 }
+function afterScoreChange(){
+  refreshStatus();
+  if(!document.getElementById("standingsView").hidden) renderStandings();
+}
 document.querySelectorAll("[data-key]").forEach(el=>{
-  el.addEventListener("input", ()=>{ store[el.dataset.key]=el.value; persist(); refreshStatus(); });
+  el.addEventListener("input", ()=>{ store[el.dataset.key]=el.value; persist(); afterScoreChange(); });
 });
 document.querySelectorAll("[data-chip]").forEach(btn=>{
   const k = btn.dataset.chip;
@@ -404,7 +467,26 @@ document.querySelectorAll("[data-chip]").forEach(btn=>{
     btn.className = "chip "+next; btn.textContent = CHIPLBL[next];
   });
 });
-// load the source of truth, then paint
+// pull the published scores from the GitHub repo
+async function pullFromRepo(quiet){
+  try{
+    const r = await fetch(REPO_URL, {cache:"no-store"});
+    if(!r.ok) throw new Error("http "+r.status);
+    const data = await r.json();
+    if(!data || typeof data !== "object") throw new Error("bad json");
+    store = data;
+    persist();                 // mirrors to scores.json (if server) + localStorage
+    applyStoreToInputs();
+    afterScoreChange();
+    if(!quiet) setSync(fileMode, "loaded from repo");
+    return true;
+  }catch(e){
+    if(!quiet) alert("Couldn't load scores from the repo — offline, or the URL is blocked.");
+    return false;
+  }
+}
+
+// load order: local scores.json (source of truth) → else repo defaults
 (async ()=>{
   try{
     const r = await fetch("scores.json", {cache:"no-store"});
@@ -417,10 +499,16 @@ document.querySelectorAll("[data-chip]").forEach(btn=>{
       }
     }
   }catch(e){ /* no server: stay on localStorage */ }
+
+  if(Object.keys(store).length === 0){
+    await pullFromRepo(true);   // nothing saved yet → seed from the repo
+  }
   if(!fileMode) setSync(false, "browser only");
   applyStoreToInputs();
   refreshStatus();
 })();
+
+document.getElementById("btnRepo").onclick = ()=> pullFromRepo(false);
 
 // manual backup / restore (works even without the server)
 function exportScores(){
@@ -509,6 +597,61 @@ document.getElementById("jumpNext").onclick = ()=>{
   const c = document.querySelector(".mcard.is-live") || document.querySelector(".mcard.is-next");
   (c || document.getElementById("knockout")).scrollIntoView({block:"center"});
 };
+
+// ---- standings (computed from group-stage scores) ----
+function computeStandings(){
+  const G = {};
+  M.forEach((m,i)=>{
+    const [,,h,a,g] = m;
+    (G[g] = G[g] || {});
+    [h,a].forEach(c=>{ G[g][c] = G[g][c] || {code:c,P:0,W:0,D:0,L:0,GF:0,GA:0,Pts:0}; });
+    const sh = store["g"+i+"h"], sa = store["g"+i+"a"];
+    if(sh==null||sh===""||sa==null||sa==="") return;
+    const hs = parseInt(sh,10), as = parseInt(sa,10);
+    if(!Number.isFinite(hs)||!Number.isFinite(as)) return;
+    const H = G[g][h], A = G[g][a];
+    H.P++; A.P++; H.GF+=hs; H.GA+=as; A.GF+=as; A.GA+=hs;
+    if(hs>as){ H.W++; A.L++; H.Pts+=3; }
+    else if(as>hs){ A.W++; H.L++; A.Pts+=3; }
+    else { H.D++; A.D++; H.Pts++; A.Pts++; }
+  });
+  return G;
+}
+function renderStandings(){
+  const G = computeStandings();
+  // all values below come from static team data (T) or integers — no user free-text.
+  let html = "";
+  Object.keys(G).sort().forEach(g=>{
+    const rows = Object.values(G[g]).sort((x,y)=>
+      y.Pts-x.Pts || (y.GF-y.GA)-(x.GF-x.GA) || y.GF-x.GF || T[x.code][1].localeCompare(T[y.code][1]));
+    html += `<div class="grptable"><h3>Group ${g}</h3><table>
+      <thead><tr><th></th><th class="tl">Team</th><th>Pl</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr></thead><tbody>`;
+    rows.forEach((r,idx)=>{
+      const gd = r.GF - r.GA;
+      const cls = (idx<2 ? "q" : idx===2 ? "q3" : "") + (r.code==="EGY" ? " egyrow" : "");
+      html += `<tr class="${cls}">
+        <td class="pos">${idx+1}</td>
+        <td class="tl"><img src="https://flagcdn.com/h20/${T[r.code][0]}.png" alt="">${T[r.code][1]}</td>
+        <td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td>
+        <td class="gf">${r.GF}</td><td class="ga">${r.GA}</td><td>${gd>0?"+":""}${gd}</td>
+        <td class="pts">${r.Pts}</td></tr>`;
+    });
+    html += `</tbody></table></div>`;
+  });
+  const root = document.getElementById("standings");
+  root.replaceChildren();
+  root.insertAdjacentHTML("beforeend", html);
+}
+
+// ---- tabs ----
+const tabBtns = document.querySelectorAll(".tab");
+function showView(v){
+  document.getElementById("matchesView").hidden = (v!=="matches");
+  document.getElementById("standingsView").hidden = (v!=="standings");
+  tabBtns.forEach(t=> t.classList.toggle("on", t.dataset.view===v));
+  if(v==="standings") renderStandings();
+}
+tabBtns.forEach(t=> t.onclick = ()=> showView(t.dataset.view));
 
 // ---- filters ----
 const q = document.getElementById("q");
