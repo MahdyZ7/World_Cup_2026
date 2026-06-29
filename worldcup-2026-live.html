@@ -343,15 +343,50 @@
   }
   .pagefoot a{color:var(--gold)}
 
-  /* ---- knockout bracket ---- */
-  .bracket-outer{overflow-x:auto;padding:18px 14px 80px}
-  .brlabel{
-    text-align:center;font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;
-    font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);flex-shrink:0;
+  /* ---- knockout bracket (radial) ---- */
+  .bracket-outer{padding:10px 8px 70px}
+  .rad-head{text-align:center;margin:2px 0 4px}
+  .rad-head h2{
+    font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;font-size:15px;
+    letter-spacing:3px;text-transform:uppercase;color:var(--gold);
   }
-  .brlabel small{display:block;font-size:9.5px;color:var(--dim);font-weight:500;letter-spacing:1px;margin-top:3px}
-  .bslot{position:absolute;display:flex;align-items:center;justify-content:center}
-  .bmcard{background:var(--card);border:1px solid var(--card-edge);border-radius:9px;padding:6px 9px}
+  .rad-head p{color:var(--dim);font-size:11.5px;margin-top:4px;letter-spacing:.4px}
+  .radial-wrap{
+    position:relative;width:min(700px,97vw);aspect-ratio:1;margin:8px auto 0;
+    container-type:inline-size;
+  }
+  .radial-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+  .radial-svg .rl-base{fill:none;stroke:#21402a;stroke-width:1.3;stroke-linecap:round}
+  .radial-svg .rl-win{fill:none;stroke:var(--live);stroke-width:2.1;stroke-linecap:round;
+    filter:drop-shadow(0 0 3px var(--live))}
+  .rbadge{
+    position:absolute;transform:translate(-50%,-50%);border-radius:50%;
+    background:#0b1810 center/cover no-repeat;border:2px solid var(--card-edge);
+    box-shadow:0 1px 4px #0009;display:flex;align-items:center;justify-content:center;
+    font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;color:var(--dim);
+    overflow:hidden;z-index:2;
+  }
+  .rbadge.empty{width:1.7cqw;height:1.7cqw;border-width:1px;border-color:#1c3a25;background:#0a140d}
+  .rbadge.r0{width:6.6cqw;height:6.6cqw;border-color:var(--gold);font-size:2cqw}
+  .rbadge.r1{width:4.2cqw;height:4.2cqw;font-size:1.5cqw}
+  .rbadge.r2{width:4.7cqw;height:4.7cqw;font-size:1.6cqw}
+  .rbadge.r3{width:5.2cqw;height:5.2cqw;font-size:1.7cqw}
+  .rbadge.r4{width:6cqw;height:6cqw;font-size:1.9cqw}
+  .rbadge.won{border-color:var(--live);box-shadow:0 0 9px var(--live-glow),0 1px 4px #0009}
+  .rlabel{
+    position:absolute;transform:translate(-50%,-50%);text-align:center;line-height:1.02;
+    pointer-events:none;width:8cqw;z-index:1;
+  }
+  .rlabel b{display:block;font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;
+    font-size:1.6cqw;letter-spacing:.2px;color:var(--cream)}
+  .rlabel span{font-size:1.45cqw;color:var(--gold);font-weight:700}
+  .rad-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;z-index:3}
+  .rad-glow{position:absolute;left:50%;top:50%;width:32cqw;height:32cqw;transform:translate(-50%,-50%);
+    border-radius:50%;background:radial-gradient(circle,var(--gold-glow) 0%,transparent 66%);pointer-events:none}
+  .rad-trophy{position:relative;font-size:8.5cqw;line-height:1;filter:drop-shadow(0 2px 12px #e8b84066)}
+  .rad-champ{position:relative;margin-top:1px;font-family:"Barlow Semi Condensed",sans-serif;
+    font-weight:700;font-size:2.3cqw;color:var(--gold);letter-spacing:.4px;text-shadow:0 0 10px #e8b84055}
+  .bmcard{background:var(--card);border:1px solid var(--card-edge);border-radius:9px;padding:6px 9px;width:200px}
   .bteam{display:flex;align-items:center;justify-content:space-between;gap:6px;
     padding:2px 0;font-size:12.5px;line-height:1.2}
   .bteam .bnm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -361,8 +396,7 @@
   .bteam.loser{opacity:.38}
   .bteam.tbd .bnm{color:var(--dim);font-weight:400;font-style:italic;font-size:11.5px}
   .bdivider{height:1px;background:var(--card-edge);margin:2px 0}
-  .bracket-svg{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
-  .bracket-tp{text-align:center;margin:28px 0 0;padding:0 14px}
+  .bracket-tp{text-align:center;margin:34px 0 0;padding:0 14px}
   .bracket-tp-hd{
     font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;font-size:11px;
     letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:8px;
@@ -963,15 +997,29 @@ function updateQualBadges(){
   });
 }
 
-// ---- knockout bracket ----
-const BS=60, BW=155, BG=32, BTOTAL_H=16*BS; // slot px, card width, gap, total height
-const BRACKETS=[
-  {key:"r32",n:16,label:"Round of 32",   sub:"28 Jun – 3 Jul"},
-  {key:"r16",n:8, label:"Round of 16",   sub:"4 – 7 Jul"},
-  {key:"qf", n:4, label:"Quarter-finals",sub:"9 – 11 Jul"},
-  {key:"sf", n:2, label:"Semi-finals",   sub:"14 – 15 Jul"},
-  {key:"fin",n:1, label:"Final",         sub:"19 Jul · New York"},
-];
+// ---- knockout bracket (radial) ----
+const BW=155; // card width for the 3rd-place play-off card
+// team name -> flag iso / short code (built from the T table)
+const NAME2ISO={}, NAME2CODE={};
+for(const k in T){
+  NAME2ISO[T[k][1].toLowerCase()]=T[k][0]; NAME2ISO[k.toLowerCase()]=T[k][0];
+  NAME2CODE[T[k][1].toLowerCase()]=k;
+}
+const isoOf  = n => NAME2ISO[(n||"").trim().toLowerCase()] || "";
+const codeOf = n => { const t=(n||"").trim(); return NAME2CODE[t.toLowerCase()] || t.slice(0,3).toUpperCase(); };
+
+// winner of a knockout match, derived from stored scores (pens break draws)
+function advWinner(h,a,round,idx){
+  h=(h||"").trim(); a=(a||"").trim(); if(!h||!a) return "";
+  const pre = round==="fin" ? "fin0" : round+idx;
+  const sh=store[pre+"sh"], sa=store[pre+"sa"];
+  if(sh==null||sh===""||sa==null||sa==="") return "";
+  const nh=+sh, na=+sa;
+  if(nh>na) return h; if(na>nh) return a;
+  const ph=store[pre+"ph"], pa=store[pre+"pa"];
+  if(ph!=null&&ph!==""&&pa!=null&&pa!==""&&+ph!==+pa) return (+ph>+pa)?h:a;
+  return "";
+}
 
 function bCard(id){
   const h=(store[id+"h"]||"").trim(), a=(store[id+"a"]||"").trim();
@@ -999,65 +1047,106 @@ function renderBracket(){
   const root=document.getElementById("bracketInner");
   if(!root) return;
   root.replaceChildren();
-  const totalW=BRACKETS.length*BW+(BRACKETS.length-1)*BG;
 
-  // Labels row
-  const labelRow=document.createElement("div");
-  labelRow.style.cssText=`display:flex;gap:0;min-width:max-content;margin-bottom:12px`;
-  BRACKETS.forEach((r,ri)=>{
-    const lbl=document.createElement("div"); lbl.className="brlabel"; lbl.style.width=BW+"px";
-    const txt=document.createTextNode(r.label);
-    const br=document.createElement("br");
-    const sm=document.createElement("small"); sm.textContent=r.sub;
-    lbl.append(txt,br,sm); labelRow.append(lbl);
-    if(ri<BRACKETS.length-1){const sp=document.createElement("div");sp.style.width=BG+"px";labelRow.append(sp);}
-  });
+  // --- compute the rings (winners auto-advance from the entered scores) ---
+  const ring0=[];                                                     // 32 teams
+  for(let i=0;i<16;i++){ ring0.push((store["r32"+i+"h"]||"").trim()); ring0.push((store["r32"+i+"a"]||"").trim()); }
+  const ring1=[]; for(let k=0;k<16;k++) ring1.push(advWinner(ring0[2*k],ring0[2*k+1],"r32",k)); // r16
+  const ring2=[]; for(let k=0;k<8;k++)  ring2.push(advWinner(ring1[2*k],ring1[2*k+1],"r16",k)); // qf
+  const ring3=[]; for(let k=0;k<4;k++)  ring3.push(advWinner(ring2[2*k],ring2[2*k+1],"qf", k)); // sf
+  const ring4=[]; for(let k=0;k<2;k++)  ring4.push(advWinner(ring3[2*k],ring3[2*k+1],"sf", k)); // finalists
+  const champion = advWinner(ring4[0],ring4[1],"fin",0);
+  const rings=[ring0,ring1,ring2,ring3,ring4];
 
-  // SVG connector lines
+  // --- geometry ---
+  const SIZE=780, C=SIZE/2, D2R=Math.PI/180;
+  const R=[315,252,191,130,72];            // radius per ring (0..4)
+  const TROPHY_R=34, LABELR=356;
+  const span=168, leftStart=96, rightStart=276;   // left half on left arc, right half on right
+  const leafAng = L => L<16 ? leftStart+L*(span/15) : rightStart+(L-16)*(span/15);
+  const ang=[[]];
+  for(let L=0;L<32;L++) ang[0][L]=leafAng(L);
+  for(let lvl=1;lvl<5;lvl++){ ang[lvl]=[]; const p=ang[lvl-1];
+    for(let k=0;k<p.length/2;k++) ang[lvl][k]=(p[2*k]+p[2*k+1])/2; }
+  const pt=(a,r)=>[C+r*Math.cos(a*D2R), C+r*Math.sin(a*D2R)];
+  const f=n=>Math.round(n*100)/100;
+  const pct=v=>(v/SIZE*100)+"%";
+
+  // --- SVG connectors ---
   const NS="http://www.w3.org/2000/svg";
   const svg=document.createElementNS(NS,"svg");
-  svg.setAttribute("class","bracket-svg");
-  svg.setAttribute("width",totalW); svg.setAttribute("height",BTOTAL_H);
-  svg.setAttribute("stroke","#1d3b28"); svg.setAttribute("stroke-width","1.5"); svg.setAttribute("fill","none");
-  let colX=0;
-  BRACKETS.forEach((r,ri)=>{
-    if(ri===BRACKETS.length-1){colX+=BW;return;}
-    const sH=BTOTAL_H/r.n, nsH=BTOTAL_H/BRACKETS[ri+1].n;
-    const midX=colX+BW+BG/2, nextX=colX+BW+BG;
-    for(let i=0;i<r.n;i+=2){
-      const y1=i*sH+sH/2, y2=(i+1)*sH+sH/2, pY=(i/2)*nsH+nsH/2;
-      const poly=document.createElementNS(NS,"polyline");
-      poly.setAttribute("points",`${colX+BW},${y1} ${midX},${y1} ${midX},${y2} ${colX+BW},${y2}`);
-      svg.append(poly);
-      const line=document.createElementNS(NS,"line");
-      line.setAttribute("x1",midX);line.setAttribute("y1",pY);
-      line.setAttribute("x2",nextX);line.setAttribute("y2",pY);
-      svg.append(line);
-    }
-    colX+=BW+BG;
-  });
+  svg.setAttribute("class","radial-svg");
+  svg.setAttribute("viewBox",`0 0 ${SIZE} ${SIZE}`);
+  const seg=(d,cls)=>{ const p=document.createElementNS(NS,"path"); p.setAttribute("d",d); p.setAttribute("class",cls); svg.append(p); };
+  const radial=(a,r1,r2)=>{ const [x1,y1]=pt(a,r1),[x2,y2]=pt(a,r2); return `M${f(x1)} ${f(y1)} L${f(x2)} ${f(y2)} `; };
+  const arc=(rm,a0,a1)=>{ const [x0,y0]=pt(a0,rm),[x1,y1]=pt(a1,rm); return `M${f(x0)} ${f(y0)} A ${rm} ${rm} 0 0 ${a1>a0?1:0} ${f(x1)} ${f(y1)} `; };
 
-  // Round columns
-  const body=document.createElement("div");
-  body.style.cssText=`position:relative;width:${totalW}px;height:${BTOTAL_H}px`;
-  body.append(svg);
-  colX=0;
-  BRACKETS.forEach((r,ri)=>{
-    const sH=BTOTAL_H/r.n;
-    const col=document.createElement("div");
-    col.style.cssText=`position:absolute;left:${colX}px;top:0;width:${BW}px;height:${BTOTAL_H}px`;
-    for(let i=0;i<r.n;i++){
-      const cardH=52, slot=document.createElement("div");
-      slot.className="bslot";
-      slot.style.cssText=`top:${Math.round(i*sH+(sH-cardH)/2)}px;width:${BW}px`;
-      slot.append(bCard(r.key==="fin"?"fin0":r.key+i));
-      col.append(slot);
+  for(let lvl=0;lvl<4;lvl++){
+    const rc=R[lvl], rp=R[lvl+1], rm=(rc+rp)/2;
+    const parents=rings[lvl+1], children=rings[lvl];
+    for(let k=0;k<parents.length;k++){
+      const a0=ang[lvl][2*k], a1=ang[lvl][2*k+1], aP=ang[lvl+1][k];
+      seg(radial(a0,rc,rm)+radial(a1,rc,rm)+arc(rm,a0,a1)+radial(aP,rm,rp),"rl-base");
+      const pteam=parents[k];
+      if(pteam){
+        const aWin = children[2*k]===pteam ? a0 : a1;
+        seg(radial(aWin,rc,rm)+arc(rm,aWin,aP)+radial(aP,rm,rp),"rl-win");
+      }
     }
-    body.append(col);
-    colX+=BW+(ri<BRACKETS.length-1?BG:0);
-  });
+  }
+  // final 4 -> centre
+  for(let k=0;k<2;k++){
+    seg(radial(ang[4][k],R[4],TROPHY_R+4),"rl-base");
+    if(champion && ring4[k]===champion) seg(radial(ang[4][k],R[4],TROPHY_R+4),"rl-win");
+  }
 
-  // 3rd-place play-off
+  // --- wrap with badges over the SVG ---
+  const wrap=document.createElement("div"); wrap.className="radial-wrap"; wrap.append(svg);
+  const badge=(team,won,a,r,cls)=>{
+    const [x,y]=pt(a,r);
+    const b=document.createElement("div");
+    b.className="rbadge "+(team?cls+(won?" won":""):"empty");
+    b.style.left=pct(x); b.style.top=pct(y);
+    if(team){
+      const iso=isoOf(team);
+      if(iso) b.style.backgroundImage=`url(https://flagcdn.com/h40/${iso}.png)`;
+      else b.textContent=codeOf(team);
+      b.title=team;
+    }
+    wrap.append(b);
+  };
+  // outer ring + labels
+  for(let L=0;L<32;L++){
+    const team=ring0[L], won = !!team && ring1[L>>1]===team;
+    badge(team,won,ang[0][L],R[0],"r0");
+    const [lx,ly]=pt(ang[0][L],LABELR);
+    const lab=document.createElement("div"); lab.className="rlabel";
+    lab.style.left=pct(lx); lab.style.top=pct(ly);
+    if(team){
+      const sc=store["r32"+(L>>1)+((L&1)?"sa":"sh")];
+      lab.innerHTML=`<b>${codeOf(team)}</b>`+((sc!=null&&sc!=="")?`<span>${sc}</span>`:"");
+    }
+    wrap.append(lab);
+  }
+  // inner rings
+  for(let lvl=1;lvl<5;lvl++){
+    const teams=rings[lvl];
+    for(let k=0;k<teams.length;k++){
+      const team=teams[k];
+      const won = !!team && (lvl<4 ? rings[lvl+1][k>>1]===team : champion===team);
+      badge(team,won,ang[lvl][k],R[lvl],"r"+lvl);
+    }
+  }
+  // centre trophy + champion
+  const centre=document.createElement("div"); centre.className="rad-center";
+  centre.innerHTML=`<div class="rad-glow"></div><div class="rad-trophy">🏆</div>`+
+    (champion?`<div class="rad-champ">${champion}</div>`:"");
+  wrap.append(centre);
+
+  // heading + 3rd-place play-off
+  const head=document.createElement("div"); head.className="rad-head";
+  head.innerHTML=`<h2>Road to the Final</h2><p>Winners advance automatically as you enter scores in the Matches tab</p>`;
+
   const tp=document.createElement("div"); tp.className="bracket-tp";
   const tpHd=document.createElement("div"); tpHd.className="bracket-tp-hd";
   tpHd.textContent="Third-place play-off · 19 Jul · Miami";
@@ -1065,7 +1154,7 @@ function renderBracket(){
   tpWrap.append(bCard("tp0"));
   tp.append(tpHd,tpWrap);
 
-  root.append(labelRow,body,tp);
+  root.append(head,wrap,tp);
 }
 
 // ---- tabs ----
