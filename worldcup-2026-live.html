@@ -358,6 +358,10 @@
   }
   .ko-team.home{text-align:right}
   .ko-team:focus{outline:none;border-color:var(--gold)}
+  /* auto-derived (read-only) knockout teams advance from results */
+  .ko-team[readonly]{background:#0a140d;border-color:#15281b;color:var(--cream);cursor:default}
+  .ko-team[readonly]:focus{border-color:#15281b}
+  .ko-team[readonly]::placeholder{color:var(--dim);font-style:italic}
   .mcard.kof{grid-template-columns:110px 1fr auto 1fr 118px}
   .mcard.final-card{border-color:var(--gold);background:linear-gradient(110deg,#2c2107 0%,var(--card) 45%)}
 
@@ -376,6 +380,8 @@
 
   /* ---- knockout bracket (radial) ---- */
   .bracket-outer{padding:10px 8px 70px}
+  /* embedded overview bracket at the top of the Matches tab */
+  .matches-bracket{padding:14px 8px 22px;border-bottom:1px solid var(--card-edge);margin-bottom:6px}
   .rad-head{text-align:center;margin:2px 0 4px}
   .rad-head h2{
     font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;font-size:15px;
@@ -476,6 +482,8 @@
 </div>
 
 <section id="matchesView">
+  <div class="matches-bracket bracket-outer" id="matchesBracket"></div>
+
   <nav class="controls">
     <button class="fbtn" id="jumpNext">⤓ Next match</button>
     <input type="search" id="q" placeholder="Search team… (e.g. Egypt, Brazil)" autocomplete="off">
@@ -747,11 +755,12 @@ function updatePenRows(){
   });
 }
 function afterScoreChange(){
+  applyDerivedKO();          // advance R16→Final team names from the latest results
   refreshStatus();
   updateQualBadges();
   updatePenRows();
   if(!document.getElementById("standingsView").hidden) renderStandings();
-  if(!document.getElementById("bracketView").hidden) renderBracket();
+  renderBrackets();          // refresh the embedded + tab brackets that are on screen
 }
 document.querySelectorAll("[data-key]").forEach(el=>{
   el.addEventListener("input", ()=>{ store[el.dataset.key]=el.value; persist(); afterScoreChange(); });
@@ -804,9 +813,11 @@ async function pullFromRepo(quiet){
   if(!fileMode) setSync(false, "browser only");
   seedR32Defaults();
   applyStoreToInputs();
+  applyDerivedKO();          // advance R16→Final teams before the first paint
   updateQualBadges();
   updatePenRows();
   refreshStatus();
+  renderBracket(document.getElementById("matchesBracket"));
 })();
 
 document.getElementById("btnRepo").onclick = ()=> pullFromRepo(false);
@@ -820,7 +831,7 @@ function exportScores(){
 function importScores(file){
   file.text().then(t=>{
     const data = JSON.parse(t);
-    if(data && typeof data === "object"){ store = data; seedR32Defaults(); persist(); applyStoreToInputs(); refreshStatus(); }
+    if(data && typeof data === "object"){ store = data; seedR32Defaults(); persist(); applyStoreToInputs(); afterScoreChange(); }
   }).catch(()=> alert("That file isn't valid scores JSON."));
 }
 document.getElementById("btnExport").onclick = exportScores;
@@ -906,7 +917,11 @@ function refreshStatus(){
   if(nextCard && nextCard.dataset.koid){
     // knockout banner
     const id = nextCard.dataset.koid;
-    const h = (store[id+"h"] || "?").trim(), a = (store[id+"a"] || "?").trim();
+    // read team names off the card inputs so auto-derived R16+ names show too
+    const hEl = nextCard.querySelector('[data-key="'+id+'h"]');
+    const aEl = nextCard.querySelector('[data-key="'+id+'a"]');
+    const h = ((hEl && hEl.value) || store[id+"h"] || "?").trim();
+    const a = ((aEl && aEl.value) || store[id+"a"] || "?").trim();
     const ch = CHIPS.includes(store[id+"ch"]) ? store[id+"ch"] : "BBC";
     const dtEl = nextCard.querySelector(".ko-when");
     const dtStr = dtEl ? dtEl.value : "";
@@ -1055,9 +1070,65 @@ function advWinner(h,a,round,idx){
   if(ph!=null&&ph!==""&&pa!=null&&pa!==""&&+ph!==+pa) return (+ph>+pa)?h:a;
   return "";
 }
+// loser of a knockout match (used for the third-place play-off)
+function advLoser(h,a,round,idx){
+  const w=advWinner(h,a,round,idx); if(!w) return "";
+  h=(h||"").trim(); a=(a||"").trim();
+  return w===h ? a : h;
+}
+
+// R32_DATA is in chronological order, which is NOT the bracket-tree order. This maps
+// each bracket leaf (left→right across the tree) to its R32_DATA index, per the official
+// FIFA 2026 bracket. R16: 89(W74∧W77),90(W73∧W75),93,94,91,92,95,96 → QF 97=89∧90,
+// 98=93∧94, 99=91∧92, 100=95∧96 → SF 101=97∧98, 102=99∧100. Once leaves are in this
+// order, every higher round is a plain adjacent pairing.
+const KO_LEAF_ORDER = [2,5, 0,3, 11,10, 9,8, 1,4, 6,7, 14,13, 12,15];
+
+// the five rings of the knockout tree, derived purely from entered scores:
+// ring0 = 32 starters, ring1 = R16 (16), ring2 = QF (8), ring3 = SF (4), ring4 = finalists (2)
+function koRings(){
+  const ring0=[], ring1=[];
+  for(let j=0;j<16;j++){
+    const i = KO_LEAF_ORDER[j];                 // real R32 match index for this bracket slot
+    const h=(store["r32"+i+"h"]||"").trim(), a=(store["r32"+i+"a"]||"").trim();
+    ring0.push(h, a);
+    ring1.push(advWinner(h,a,"r32",i));         // winner reads scores from the real r32 match
+  }
+  const ring2=[]; for(let k=0;k<8;k++)  ring2.push(advWinner(ring1[2*k],ring1[2*k+1],"r16",k));
+  const ring3=[]; for(let k=0;k<4;k++)  ring3.push(advWinner(ring2[2*k],ring2[2*k+1],"qf", k));
+  const ring4=[]; for(let k=0;k<2;k++)  ring4.push(advWinner(ring3[2*k],ring3[2*k+1],"sf", k));
+  return {ring0,ring1,ring2,ring3,ring4};
+}
+
+// team names for every R16→Final card (and the 3rd-place play-off), advanced from results
+function derivedKO(){
+  const {ring1,ring2,ring3,ring4}=koRings();
+  const out={};
+  for(let k=0;k<8;k++){ out["r16"+k+"h"]=ring1[2*k]; out["r16"+k+"a"]=ring1[2*k+1]; }
+  for(let k=0;k<4;k++){ out["qf"+k+"h"]=ring2[2*k];  out["qf"+k+"a"]=ring2[2*k+1]; }
+  for(let k=0;k<2;k++){ out["sf"+k+"h"]=ring3[2*k];  out["sf"+k+"a"]=ring3[2*k+1]; }
+  out["fin0h"]=ring4[0]; out["fin0a"]=ring4[1];
+  out["tp0h"]=advLoser(ring3[0],ring3[1],"sf",0);   // semi-final losers
+  out["tp0a"]=advLoser(ring3[2],ring3[3],"sf",1);
+  return out;
+}
+
+// fill the R16→Final team inputs from the derived names and lock them (read-only)
+function applyDerivedKO(){
+  const d=derivedKO();
+  for(const key in d){
+    const el=document.querySelector('.ko-team[data-key="'+key+'"]');
+    if(!el) continue;
+    el.readOnly=true; el.placeholder="TBD";
+    el.value=d[key]||"";
+  }
+}
 
 function bCard(id){
-  const h=(store[id+"h"]||"").trim(), a=(store[id+"a"]||"").trim();
+  // team names may be auto-derived (held in the inputs) — prefer those, fall back to store
+  const hEl=document.querySelector('.ko-team[data-key="'+id+'h"]');
+  const aEl=document.querySelector('.ko-team[data-key="'+id+'a"]');
+  const h=((hEl&&hEl.value)||store[id+"h"]||"").trim(), a=((aEl&&aEl.value)||store[id+"a"]||"").trim();
   const sh=store[id+"sh"], sa=store[id+"sa"];
   const scored=sh!=null&&sh!==""&&sa!=null&&sa!=="";
   const hW=scored&&+sh>+sa, aW=scored&&+sa>+sh;
@@ -1078,18 +1149,13 @@ function bCard(id){
   return wrap;
 }
 
-function renderBracket(){
-  const root=document.getElementById("bracketInner");
+function renderBracket(root){
+  root = root || document.getElementById("bracketInner");
   if(!root) return;
   root.replaceChildren();
 
-  // --- compute the rings (winners auto-advance from the entered scores) ---
-  const ring0=[];                                                     // 32 teams
-  for(let i=0;i<16;i++){ ring0.push((store["r32"+i+"h"]||"").trim()); ring0.push((store["r32"+i+"a"]||"").trim()); }
-  const ring1=[]; for(let k=0;k<16;k++) ring1.push(advWinner(ring0[2*k],ring0[2*k+1],"r32",k)); // r16
-  const ring2=[]; for(let k=0;k<8;k++)  ring2.push(advWinner(ring1[2*k],ring1[2*k+1],"r16",k)); // qf
-  const ring3=[]; for(let k=0;k<4;k++)  ring3.push(advWinner(ring2[2*k],ring2[2*k+1],"qf", k)); // sf
-  const ring4=[]; for(let k=0;k<2;k++)  ring4.push(advWinner(ring3[2*k],ring3[2*k+1],"sf", k)); // finalists
+  // --- the rings (winners auto-advance from the entered scores) ---
+  const {ring0,ring1,ring2,ring3,ring4}=koRings();
   const champion = advWinner(ring4[0],ring4[1],"fin",0);
   const rings=[ring0,ring1,ring2,ring3,ring4];
 
@@ -1158,7 +1224,7 @@ function renderBracket(){
     const lab=document.createElement("div"); lab.className="rlabel";
     lab.style.left=pct(lx); lab.style.top=pct(ly);
     if(team){
-      const sc=store["r32"+(L>>1)+((L&1)?"sa":"sh")];
+      const sc=store["r32"+KO_LEAF_ORDER[L>>1]+((L&1)?"sa":"sh")];
       lab.innerHTML=`<b>${codeOf(team)}</b>`+((sc!=null&&sc!=="")?`<span>${sc}</span>`:"");
     }
     wrap.append(lab);
@@ -1192,6 +1258,12 @@ function renderBracket(){
   root.append(head,wrap,tp);
 }
 
+// re-render whichever bracket instances are currently on screen
+function renderBrackets(){
+  if(!document.getElementById("matchesView").hidden) renderBracket(document.getElementById("matchesBracket"));
+  if(!document.getElementById("bracketView").hidden) renderBracket(document.getElementById("bracketInner"));
+}
+
 // ---- tabs ----
 const tabBtns = document.querySelectorAll(".tab");
 function showView(v){
@@ -1200,7 +1272,8 @@ function showView(v){
   document.getElementById("bracketView").hidden = (v!=="bracket");
   tabBtns.forEach(t=> t.classList.toggle("on", t.dataset.view===v));
   if(v==="standings") renderStandings();
-  if(v==="bracket") renderBracket();
+  if(v==="bracket") renderBracket(document.getElementById("bracketInner"));
+  if(v==="matches") renderBracket(document.getElementById("matchesBracket"));
 }
 tabBtns.forEach(t=> t.onclick = ()=> showView(t.dataset.view));
 
