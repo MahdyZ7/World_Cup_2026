@@ -37,6 +37,7 @@
     color:var(--cream);
     font-family:"Barlow Condensed",sans-serif;
     min-height:100vh;
+    overflow-anchor:none;   /* the sticky header resizes on scroll; don't let scroll-anchoring fight it */
   }
 
   /* ---- hero ---- */
@@ -1283,19 +1284,29 @@ const stickyhead = document.getElementById("stickyhead");
 // keep the controls bar pinned just beneath the sticky header
 const syncStickyH = ()=> document.documentElement.style.setProperty("--stickyH", stickyhead.offsetHeight + "px");
 new ResizeObserver(syncStickyH).observe(stickyhead);
-window.addEventListener("resize", syncStickyH);
+
+// scroll offset at which the header pins (= height of the hero above it)
+const hero = document.querySelector(".hero");
+let pinAt = 0;
+const measurePin = ()=>{ pinAt = hero.offsetTop + hero.offsetHeight; };
+measurePin();
+window.addEventListener("resize", ()=>{ measurePin(); syncStickyH(); });
 syncStickyH();
-let wasCompact = null;
+
+function setCompact(on){
+  if(on === stickyhead.classList.contains("compact")) return;
+  stickyhead.classList.toggle("compact", on);
+  syncStickyH();                 // update now…
+  setTimeout(syncStickyH, 230);  // …and again after the shrink transition settles
+}
+// Compact only once the header is *firmly* pinned, with a hysteresis gap so the
+// toggle never coincides with the pin/unpin edge — that edge is what caused the
+// resize↔scroll feedback loop on slow scroll. (overflow-anchor:none seals it.)
 const onScroll = ()=>{
-  toTop.classList.toggle("show", window.scrollY > 400);
-  // slim the banner only once the header is actually pinned at the top
-  const compact = stickyhead.getBoundingClientRect().top <= 0;
-  stickyhead.classList.toggle("compact", compact);
-  if(compact !== wasCompact){
-    wasCompact = compact;
-    syncStickyH();                 // update now…
-    setTimeout(syncStickyH, 230);  // …and again after the shrink transition settles
-  }
+  const y = window.scrollY;
+  toTop.classList.toggle("show", y > 400);
+  if(y > pinAt + 40) setCompact(true);
+  else if(y < pinAt + 6) setCompact(false);
 };
 window.addEventListener("scroll", onScroll, {passive:true});
 onScroll();
