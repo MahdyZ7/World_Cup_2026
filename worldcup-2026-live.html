@@ -298,6 +298,7 @@
   .chip.BBC{background:var(--bbc)}
   .chip.STV{background:var(--stv)}
   .chip.ITVX{background:#1b2a38;color:var(--itvx)}
+  .chip.BOTH{background:linear-gradient(90deg,var(--bbc) 0 50%,var(--stv) 50% 100%)}
   button.chip{cursor:pointer}
   .vchip{
     font-family:"Barlow Semi Condensed",sans-serif;font-weight:600;font-size:10px;letter-spacing:.3px;
@@ -594,7 +595,7 @@ const M = [
 const DOW = {11:"Thursday",12:"Friday",13:"Saturday",14:"Sunday",15:"Monday",16:"Tuesday",17:"Wednesday",
              18:"Thursday",19:"Friday",20:"Saturday",21:"Sunday",22:"Monday",23:"Tuesday",24:"Wednesday",
              25:"Thursday",26:"Friday",27:"Saturday",28:"Sunday"};
-const CHIPLBL = {BBC:"iPlayer", STV:"STV", ITVX:"ITVX"};
+const CHIPLBL = {BBC:"iPlayer", STV:"STV", ITVX:"ITVX", BOTH:"BBC+ITV"};
 
 // host city for each group-stage match (same index order as M)
 const VENUE = [
@@ -682,7 +683,7 @@ const R32_DATA=[
       <div class="team home"><input class="ko-team home" data-key="${id}h" placeholder="Team 1"></div>
       <div class="score">${scoreInput(id+"sh")}<span class="d">–</span>${scoreInput(id+"sa")}</div>
       <div class="team away"><input class="ko-team" data-key="${id}a" placeholder="Team 2"></div>
-      <div class="meta"><span class="grp">Knockout</span><button class="chip BBC" data-chip="${id}ch" type="button">iPlayer</button></div>
+      <div class="meta"><span class="grp">Knockout</span><span class="chip BBC" data-chip="${id}ch">iPlayer</span></div>
       <div class="pens-row" data-penfor="${id}">Pens
         <input class="pen-input" data-key="${id}ph" maxlength="2" inputmode="numeric" autocomplete="off" placeholder="–">
         <span class="d">–</span>
@@ -715,7 +716,14 @@ const KEY = "wc26-scores";
 const REPO_URL = "https://raw.githubusercontent.com/MahdyZ7/World_Cup_2026/refs/heads/master/scores.json";
 let store = JSON.parse(localStorage.getItem(KEY) || "{}");
 let fileMode = false;
-const CHIPS = ["BBC","STV","ITVX"];
+const CHIPS = ["BBC","STV","ITVX","BOTH"];
+
+// Published UK knockout broadcasters (BBC One / ITV1 = STV in Scotland). The final and
+// third-place play-off are shown on both channels; England's R16 (BBC), quarter-final
+// (ITV) and semi-final (BBC) sit in this bracket's slots r165 / qf2 / sf1. The remaining
+// ties' exclusive BBC-vs-ITV split is not yet announced, so they stay editable. Source:
+// goal.com & 101greatgoals UK listings.
+const KO_CHANNELS = { r165:"BBC", qf2:"STV", sf0:"STV", sf1:"BBC", tp0:"BOTH", fin0:"BOTH" };
 
 function seedR32Defaults(){
   R32_DATA.forEach(([,h,a,ch],i)=>{
@@ -724,6 +732,9 @@ function seedR32Defaults(){
     if(!Object.prototype.hasOwnProperty.call(store,id+"a"))  store[id+"a"]=a;
     if(!Object.prototype.hasOwnProperty.call(store,id+"ch")) store[id+"ch"]=ch;
   });
+  for(const id in KO_CHANNELS){
+    if(!Object.prototype.hasOwnProperty.call(store,id+"ch")) store[id+"ch"]=KO_CHANNELS[id];
+  }
 }
 
 function setSync(ok, msg){
@@ -766,14 +777,8 @@ function afterScoreChange(){
 document.querySelectorAll("[data-key]").forEach(el=>{
   el.addEventListener("input", ()=>{ store[el.dataset.key]=el.value; persist(); afterScoreChange(); });
 });
-document.querySelectorAll("[data-chip]").forEach(btn=>{
-  const k = btn.dataset.chip;
-  btn.addEventListener("click", ()=>{
-    const next = CHIPS[(CHIPS.indexOf(store[k]||"BBC")+1)%CHIPS.length];
-    store[k]=next; persist();
-    btn.className = "chip "+next; btn.textContent = CHIPLBL[next];
-  });
-});
+// Knockout broadcaster chips are display-only (seeded from KO_CHANNELS / R32_DATA):
+// pressing them must not change the channel shown in the fixture list.
 // pull the published scores from the GitHub repo
 async function pullFromRepo(quiet){
   try{
@@ -865,12 +870,12 @@ function refreshStatus(){
   const chChip = ch => {
     const s = document.createElement("span");
     s.className = "chip "+ch;
-    s.textContent = ch==="BBC" ? "BBC iPlayer" : ch==="STV" ? "STV Player" : "ITVX";
+    s.textContent = ch==="BBC" ? "BBC iPlayer" : ch==="STV" ? "STV Player" : ch==="BOTH" ? "BBC + ITV" : "ITVX";
     return s;
   };
-  const chUrl = ch => ch==="BBC"
-    ? "https://www.bbc.co.uk/iplayer/event/fifa-world-cup"
-    : "https://player.stv.tv/";
+  const chUrl = ch => (ch==="STV"||ch==="ITVX")
+    ? "https://player.stv.tv/"
+    : "https://www.bbc.co.uk/iplayer/event/fifa-world-cup";
 
   // ---- group stage ----
   cards.forEach(c=>{
