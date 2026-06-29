@@ -63,6 +63,26 @@
   .clock span{font-family:"Barlow Semi Condensed",sans-serif;color:var(--dim);font-size:11.5px;
     letter-spacing:2px;text-transform:uppercase;font-weight:600}
 
+  /* ---- sticky header (next match + tabs) ---- */
+  .stickyhead{
+    position:sticky;top:0;z-index:45;
+    background:rgba(6,13,8,.82);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--card-edge);
+    padding-bottom:1px;
+  }
+  .stickyhead .nextbox{margin-top:16px}
+  .stickyhead .tabs{margin-top:16px}
+  /* slim mode once pinned */
+  .stickyhead.compact .nextbox{
+    margin:14px auto 0;padding:14px 30px;
+    flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:center;
+    gap:8px 20px;
+  }
+  .stickyhead.compact .nextbox .fixture{font-size:clamp(18px,3vw,26px);letter-spacing:.5px}
+  .stickyhead.compact .nextbox .when{display:none}
+  .stickyhead.compact .tabs{margin-top:16px}
+
   /* ---- next-match banner ---- */
   .nextbox{
     max-width:820px;margin:24px auto 0;padding:22px 28px 24px;
@@ -72,7 +92,7 @@
     box-shadow:0 24px 60px -8px #00000077, inset 0 1px 0 #28513840;
     display:flex;flex-direction:column;align-items:center;gap:10px;
     cursor:pointer;position:relative;overflow:hidden;
-    transition:transform .2s ease,box-shadow .2s ease;
+    transition:transform .2s ease,box-shadow .2s ease,padding .2s ease,margin .2s ease;
   }
   .nextbox::before{
     content:"";position:absolute;top:0;left:0;right:0;height:1px;
@@ -130,7 +150,7 @@
 
   /* ---- sticky controls ---- */
   .controls{
-    position:sticky;top:0;z-index:40;margin-top:24px;
+    position:sticky;top:var(--stickyH,0px);z-index:40;margin-top:24px;
     background:#06100800;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
     border-bottom:1px solid var(--card-edge);
     display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;padding:10px 14px;
@@ -151,6 +171,17 @@
   .fbtn.egy.on{background:var(--hl);color:#fff;border-color:var(--hl)}
   #jumpNext{background:var(--card-edge);color:var(--cream);border-color:var(--card-edge)}
   #jumpNext:hover{background:#243c2e;border-color:#243c2e}
+  #toTop{
+    position:fixed;right:18px;bottom:18px;z-index:50;
+    width:46px;height:46px;border-radius:50%;cursor:pointer;
+    display:grid;place-items:center;
+    background:var(--gold);color:var(--night);border:none;
+    font-size:22px;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.45);
+    opacity:0;visibility:hidden;transform:translateY(10px);
+    transition:opacity .2s ease,transform .2s ease,visibility .2s;
+  }
+  #toTop.show{opacity:1;visibility:visible;transform:none}
+  #toTop:hover{background:var(--cream)}
 
   /* ---- standings ---- */
   .standings-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(370px,1fr));gap:16px}
@@ -428,18 +459,21 @@
   <h1>WORLD CUP <span>2026</span></h1>
   <div class="sub">Match Centre · USA · Canada · Mexico</div>
   <div class="clock"><b id="adClock">--:--</b><span>Abu Dhabi · GMT+4</span></div>
+</header>
+
+<div class="stickyhead" id="stickyhead">
   <div class="nextbox" id="nextBox" title="Click to jump to this match">
     <span class="tag" id="nextTag">Next match</span>
     <span class="fixture" id="nextFixture">—</span>
     <span class="when" id="nextWhen"></span>
   </div>
-</header>
 
-<nav class="tabs">
-  <button class="tab on" data-view="matches">⚽ Matches</button>
-  <button class="tab" data-view="standings">📊 Standings</button>
-  <button class="tab" data-view="bracket">Bracket</button>
-</nav>
+  <nav class="tabs">
+    <button class="tab on" data-view="matches">⚽ Matches</button>
+    <button class="tab" data-view="standings">📊 Standings</button>
+    <button class="tab" data-view="bracket">Bracket</button>
+  </nav>
+</div>
 
 <section id="matchesView">
   <nav class="controls">
@@ -454,6 +488,7 @@
     <div id="groupStage"></div>
     <div id="knockout"></div>
   </main>
+  <button id="toTop" title="Back to top" aria-label="Back to top">↑</button>
 </section>
 
 <section id="standingsView" hidden>
@@ -1168,6 +1203,30 @@ function showView(v){
   if(v==="bracket") renderBracket();
 }
 tabBtns.forEach(t=> t.onclick = ()=> showView(t.dataset.view));
+
+// ---- sticky header + back to top ----
+const toTop = document.getElementById("toTop");
+const stickyhead = document.getElementById("stickyhead");
+// keep the controls bar pinned just beneath the sticky header
+const syncStickyH = ()=> document.documentElement.style.setProperty("--stickyH", stickyhead.offsetHeight + "px");
+new ResizeObserver(syncStickyH).observe(stickyhead);
+window.addEventListener("resize", syncStickyH);
+syncStickyH();
+let wasCompact = null;
+const onScroll = ()=>{
+  toTop.classList.toggle("show", window.scrollY > 400);
+  // slim the banner only once the header is actually pinned at the top
+  const compact = stickyhead.getBoundingClientRect().top <= 0;
+  stickyhead.classList.toggle("compact", compact);
+  if(compact !== wasCompact){
+    wasCompact = compact;
+    syncStickyH();                 // update now…
+    setTimeout(syncStickyH, 230);  // …and again after the shrink transition settles
+  }
+};
+window.addEventListener("scroll", onScroll, {passive:true});
+onScroll();
+toTop.onclick = ()=> window.scrollTo({top:0, behavior:"instant"});
 
 // ---- filters ----
 const q = document.getElementById("q");
