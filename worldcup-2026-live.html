@@ -571,14 +571,35 @@ const scoreInput = id => `<input data-key="${id}" maxlength="2" inputmode="numer
 
 // ---- knockout (same storage keys as the print card) ----
 const KO = [
-  ["Round of 32","28 June – 3 July · 16 matches",16,"r32"],
+  ["Round of 32","28 June – 4 July · 16 matches",16,"r32"],
   ["Round of 16","4 – 7 July · 8 matches",8,"r16"],
   ["Quarter-finals","9 – 11 July",4,"qf"],
   ["Semi-finals","Dallas 14 July · Atlanta 15 July",2,"sf"]
 ];
+
+// Confirmed R32 fixtures [AD date·time, home, away, UK channel]
+const R32_DATA=[
+  ["28/6 23:00","Canada","South Africa","STV"],
+  ["29/6 21:00","Brazil","Japan","STV"],
+  ["30/6 00:30","Germany","Paraguay","BBC"],
+  ["30/6 05:00","Netherlands","Morocco","STV"],
+  ["30/6 21:00","Ivory Coast","Norway","BBC"],
+  ["1/7 01:00","France","Sweden","STV"],
+  ["1/7 05:00","Mexico","Ecuador","STV"],
+  ["1/7 20:00","England","DR Congo","BBC"],
+  ["2/7 00:00","Belgium","Senegal","STV"],
+  ["2/7 04:00","USA","Bosnia","BBC"],
+  ["2/7 23:00","Spain","Austria","BBC"],
+  ["3/7 03:00","Portugal","Croatia","BBC"],
+  ["3/7 07:00","Switzerland","Algeria","BBC"],
+  ["3/7 22:00","Australia","Egypt","BBC"],
+  ["4/7 02:00","Argentina","Cape Verde","STV"],
+  ["4/7 05:30","Colombia","Ghana","STV"],
+];
 (function(){
   const root = document.getElementById("knockout");
-  const row = (id, dt, extra) => `<article class="mcard kof${extra||""}">
+  const row = (id, dt, extra) => `<article class="mcard kof${extra||""}" data-koid="${id}">
+      <span class="badge"></span>
       <input class="ko-when" data-key="${id}dt" value="${dt}" placeholder="date · time">
       <div class="team home"><input class="ko-team home" data-key="${id}h" placeholder="Team 1"></div>
       <div class="score">${scoreInput(id+"sh")}<span class="d">–</span>${scoreInput(id+"sa")}</div>
@@ -592,8 +613,14 @@ const KO = [
     </article>`;
   let html = "";
   KO.forEach(([title,sub,n,key])=>{
-    html += `<div class="stagehead"><h2>${title}</h2><p>${sub} · type date, time (GMT+4) &amp; teams as they're confirmed</p></div>`;
-    for(let i=0;i<n;i++) html += row(key+i,"");
+    const inst = key==="r32" ? "" : " · type date, time (GMT+4) &amp; teams as they're confirmed";
+    html += `<div class="stagehead"><h2>${title}</h2><p>${sub}${inst}</p></div>`;
+    for(let i=0;i<n;i++){
+      const dt = key==="r32" ? R32_DATA[i][0] : "";
+      const [,rh,ra] = key==="r32" ? R32_DATA[i] : ["","",""];
+      const egy = (rh==="Egypt"||ra==="Egypt") ? " egy" : "";
+      html += row(key+i, dt, egy);
+    }
   });
   html += `<div class="stagehead"><h2>Third place · 🏆 Final</h2><p>Miami &amp; New York · 19 July (GMT+4)</p></div>`
         + row("tp0","19/7 01:00") + row("fin0","19/7 23:00"," final-card");
@@ -611,6 +638,15 @@ const REPO_URL = "https://raw.githubusercontent.com/MahdyZ7/World_Cup_2026/refs/
 let store = JSON.parse(localStorage.getItem(KEY) || "{}");
 let fileMode = false;
 const CHIPS = ["BBC","STV","ITVX"];
+
+function seedR32Defaults(){
+  R32_DATA.forEach(([,h,a,ch],i)=>{
+    const id="r32"+i;
+    if(!Object.prototype.hasOwnProperty.call(store,id+"h"))  store[id+"h"]=h;
+    if(!Object.prototype.hasOwnProperty.call(store,id+"a"))  store[id+"a"]=a;
+    if(!Object.prototype.hasOwnProperty.call(store,id+"ch")) store[id+"ch"]=ch;
+  });
+}
 
 function setSync(ok, msg){
   const el = document.getElementById("syncDot");
@@ -667,6 +703,7 @@ async function pullFromRepo(quiet){
     const data = await r.json();
     if(!data || typeof data !== "object") throw new Error("bad json");
     store = data;
+    seedR32Defaults();
     persist();                 // mirrors to scores.json (if server) + localStorage
     applyStoreToInputs();
     afterScoreChange();
@@ -696,6 +733,7 @@ async function pullFromRepo(quiet){
     await pullFromRepo(true);   // nothing saved yet → seed from the repo
   }
   if(!fileMode) setSync(false, "browser only");
+  seedR32Defaults();
   applyStoreToInputs();
   updateQualBadges();
   updatePenRows();
@@ -713,7 +751,7 @@ function exportScores(){
 function importScores(file){
   file.text().then(t=>{
     const data = JSON.parse(t);
-    if(data && typeof data === "object"){ store = data; persist(); applyStoreToInputs(); refreshStatus(); }
+    if(data && typeof data === "object"){ store = data; seedR32Defaults(); persist(); applyStoreToInputs(); refreshStatus(); }
   }).catch(()=> alert("That file isn't valid scores JSON."));
 }
 document.getElementById("btnExport").onclick = exportScores;
@@ -729,9 +767,31 @@ setInterval(()=>{ document.getElementById("adClock").textContent = fmtClock.form
 const LIVE_MS = 130*60*1000;   // kickoff + ~2h10
 const cards = [...document.querySelectorAll("#groupStage .mcard")];
 
+// "D/M HH:MM" Abu Dhabi (UTC+4) → epoch ms, or null if unparseable
+function parseKoDt(str){
+  if(!str) return null;
+  const m = str.match(/^(\d{1,2})\/(\d{1,2})\s+(\d{2}):(\d{2})$/);
+  if(!m) return null;
+  const [,d,mo,h,mi] = m.map(Number);
+  return Date.UTC(2026, mo-1, d, h-4, mi);
+}
+
 function refreshStatus(){
   const now = Date.now();
   let nextCard = null;
+
+  // shared chip + URL helpers
+  const chChip = ch => {
+    const s = document.createElement("span");
+    s.className = "chip "+ch;
+    s.textContent = ch==="BBC" ? "BBC iPlayer" : ch==="STV" ? "STV Player" : "ITVX";
+    return s;
+  };
+  const chUrl = ch => ch==="BBC"
+    ? "https://www.bbc.co.uk/iplayer/event/fifa-world-cup"
+    : "https://player.stv.tv/";
+
+  // ---- group stage ----
   cards.forEach(c=>{
     const ko = +c.dataset.ko;
     const sh = store["g"+c.id.slice(1)+"h"], sa = store["g"+c.id.slice(1)+"a"];
@@ -748,38 +808,80 @@ function refreshStatus(){
       if(hasScore){ c.classList.add("is-ft"); b.textContent = "FT"; }
     }
   });
-  // banner
+
+  // ---- knockout stage ----
+  document.querySelectorAll("#knockout .mcard[data-koid]").forEach(c=>{
+    const id = c.dataset.koid;
+    const dtEl = c.querySelector(".ko-when");
+    const ms = parseKoDt(dtEl ? dtEl.value : "");
+    const sh = store[id+"sh"], sa = store[id+"sa"];
+    const hasScore = sh!==undefined && sh!=="" && sa!==undefined && sa!=="";
+    c.classList.remove("is-next","is-live","is-ft","past");
+    const b = c.querySelector(".badge");
+    if(ms === null){ if(b) b.textContent=""; return; }
+    if(now >= ms && now < ms+LIVE_MS && !hasScore){
+      c.classList.add("is-live"); if(b) b.textContent = "● LIVE";
+      if(!nextCard) nextCard = c;
+    } else if(now < ms){
+      if(!nextCard){ nextCard = c; c.classList.add("is-next"); if(b) b.textContent = "NEXT"; }
+    } else {
+      c.classList.add("past");
+      if(hasScore){ c.classList.add("is-ft"); if(b) b.textContent = "FT"; }
+    }
+  });
+
+  // ---- banner ----
   const fx = document.getElementById("nextFixture"), wh = document.getElementById("nextWhen"),
         tag = document.getElementById("nextTag"), box = document.getElementById("nextBox");
-  if(nextCard){
+
+  if(nextCard && nextCard.dataset.koid){
+    // knockout banner
+    const id = nextCard.dataset.koid;
+    const h = (store[id+"h"] || "?").trim(), a = (store[id+"a"] || "?").trim();
+    const ch = CHIPS.includes(store[id+"ch"]) ? store[id+"ch"] : "BBC";
+    const dtEl = nextCard.querySelector(".ko-when");
+    const dtStr = dtEl ? dtEl.value : "";
+    const ms = parseKoDt(dtStr);
+    fx.textContent = h + "  v  " + a;
+    if(nextCard.classList.contains("is-live")){
+      tag.textContent = "Live now"; tag.classList.add("live");
+      wh.textContent = "on "; wh.appendChild(chChip(ch));
+    } else {
+      tag.textContent = "Next match"; tag.classList.remove("live");
+      const mins = ms ? Math.round((ms-now)/60000) : 0;
+      const dd = Math.floor(mins/1440), hh = Math.floor((mins%1440)/60), mm = mins%60;
+      const cd = (dd? dd+"d ":"")+(hh? hh+"h ":"")+mm+"m";
+      wh.textContent = dtStr+" GMT+4 — kicks off in ";
+      const bEl = document.createElement("b"); bEl.textContent = cd; wh.appendChild(bEl);
+      wh.appendChild(document.createTextNode(" ")); wh.appendChild(chChip(ch));
+    }
+    box.onclick = ()=> window.open(chUrl(ch), "_blank", "noopener");
+
+  } else if(nextCard){
+    // group stage banner
     const i = +nextCard.id.slice(1);
     const [d,t,h,a,,ch] = M[i];
     fx.textContent = T[h][1] + "  v  " + T[a][1];
     const ko = +nextCard.dataset.ko;
-    const chChip = () => {                       // colored channel chip, built via DOM
-      const s = document.createElement("span");
-      s.className = "chip " + ch;
-      s.textContent = ch==="BBC" ? "BBC iPlayer" : ch==="STV" ? "STV Player" : "ITVX";
-      return s;
-    };
     if(nextCard.classList.contains("is-live")){
       tag.textContent = "Live now"; tag.classList.add("live");
       wh.textContent = VENUE[i] + " · on ";
-      wh.appendChild(chChip());
+      wh.appendChild(chChip(ch));
     } else {
       tag.textContent = "Next match"; tag.classList.remove("live");
       const mins = Math.round((ko-Date.now())/60000);
       const dd = Math.floor(mins/1440), hh = Math.floor((mins%1440)/60), mm = mins%60;
-      const cd = (dd? dd+"d ":"") + (hh? hh+"h ":"") + mm + "m";
+      const cd = (dd? dd+"d ":"")+(hh? hh+"h ":"")+mm+"m";
       wh.textContent = DOW[d]+" "+d+" June · "+t+" · "+VENUE[i]+" — kicks off in ";
       const b = document.createElement("b"); b.textContent = cd; wh.appendChild(b);
       wh.appendChild(document.createTextNode(" "));
-      wh.appendChild(chChip());
+      wh.appendChild(chChip(ch));
     }
-    box.onclick = ()=> window.open(ch==="BBC" ? "https://www.bbc.co.uk/iplayer/event/fifa-world-cup" : "https://player.stv.tv/", "_blank", "noopener");
+    box.onclick = ()=> window.open(chUrl(ch), "_blank", "noopener");
+
   } else {
-    tag.textContent = "Group stage complete";
-    fx.textContent = "See knockout rounds below";
+    tag.textContent = "Tournament complete";
+    fx.textContent = "🏆 See final result above";
     wh.textContent = "";
     box.onclick = ()=> document.getElementById("knockout").scrollIntoView();
   }
